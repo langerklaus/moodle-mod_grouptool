@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * showmembers.php
@@ -36,7 +36,7 @@ $group = $DB->get_record_sql('SELECT grp.id as grpid, grp.name as grpname, grp.c
                               FROM {grouptool_agrps} AS agrp
                                 LEFT JOIN {groups} AS grp ON agrp.groupid = grp.id
                               WHERE agrp.id = ?', array($agrpid), MUST_EXIST);
-$grouptool = $DB->get_record('grouptool', array('id'=>$group->grouptoolid), '*', MUST_EXIST);
+$grouptool = $DB->get_record('grouptool', array('id' => $group->grouptoolid), '*', MUST_EXIST);
 
 $PAGE->set_url('/mod/grouptool/showmembers.php');
 $coursecontext = context_course::instance($group->courseid);
@@ -53,51 +53,50 @@ echo $OUTPUT->heading($group->grpname, 2, 'showmembersheading');
 if (!has_capability('mod/grouptool:view_registrations', $context)
           && !$grouptool->show_members) {
     echo html_writer::tag('div', get_string('not_allowed_to_show_members', 'grouptool'),
-                          array('class'=>'reg'));
+                          array('class' => 'reg'));
 } else {
     echo $OUTPUT->heading(get_string('registrations', 'grouptool'), 3, 'showmembersheading');
     $moodlereg = groups_get_members($group->grpid, 'u.id');
-
-    $regsql = "SELECT reg.userid as id, user.firstname as firstname, user.lastname as lastname,
-                      user.idnumber as idnumber
+    $userfieldssql = user_picture::fields('user');
+    $regsql = "SELECT $userfieldssql, user.idnumber as idnumber
                FROM {grouptool_registered} as reg
                    LEFT JOIN {user} as user ON reg.userid = user.id
                WHERE reg.agrpid = ?
                ORDER BY timestamp ASC";
     if (!$regs = $DB->get_records_sql($regsql, array($agrpid))) {
         echo html_writer::tag('div', get_string('no_registrations', 'grouptool'),
-                              array('class'=>'reg'));
+                              array('class' => 'reg'));
     } else {
         echo html_writer::start_tag('ul');
         foreach ($regs as $user) {
             if (!in_array($user->id, $moodlereg)) {
                 echo html_writer::tag('li', fullname($user).
                                             ' ('.(($user->idnumber == "") ? '-' : $user->idnumber).')',
-                                      array('class'=>'registered'));
+                                      array('class' => 'registered'));
             } else {
                 echo html_writer::tag('li', fullname($user).
                                             ' ('.(($user->idnumber == "") ? '-' : $user->idnumber).')',
-                                      array('class'=>'moodlereg'));
+                                      array('class' => 'moodlereg'));
             }
         }
         echo html_writer::end_tag('ul');
     }
 
     echo $OUTPUT->heading(get_string('queue', 'grouptool'), 3, 'showmembersheading queue');
-    $queuesql = "SELECT queue.userid as id, user.firstname as firstname, user.lastname as lastname,
-                        user.idnumber as idnumber
+    $userfieldssql = user_picture::fields('user');
+    $queuesql = "SELECT $userfieldssql, user.idnumber as idnumber
                  FROM {grouptool_queued} as queue
                      LEFT JOIN {user} as user ON queue.userid = user.id
                  WHERE queue.agrpid = ?
                  ORDER BY timestamp ASC";
     if (!$queue = $DB->get_records_sql($queuesql, array($agrpid))) {
-        echo html_writer::tag('div', get_string('nobody_queued', 'grouptool'), array('class'=>'queue'));
+        echo html_writer::tag('div', get_string('nobody_queued', 'grouptool'), array('class' => 'queue'));
     } else {
         echo html_writer::start_tag('ol');
         foreach ($queue as $user) {
             echo html_writer::tag('li', fullname($user).
                                         ' ('.(($user->idnumber == "") ? '-' : $user->idnumber).')',
-                                  array('class'=>'queue'));
+                                  array('class' => 'queue'));
         }
         echo html_writer::end_tag('ol');
     }
