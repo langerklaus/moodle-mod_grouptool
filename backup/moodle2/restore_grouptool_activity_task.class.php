@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * restore_grouptool_activity_task.class.php
@@ -160,23 +160,6 @@ class restore_grouptool_activity_task extends restore_activity_task {
                                         '{grouptool}');
         $rules[] = new restore_log_rule('grouptool', 'update agrps',
                                         'view.php?id={course_module}&tab=overview', '{grouptool}');
-
-        /*
-         * @todo find out how to impelement those two rules with their references...
-         * $rules[] = new restore_log_rule('grouptool', 'grade group',
-         *                                 new moodle_url("/mod/grouptool/view.php",
-         *                                                array('id'       => $this->grouptool->id,
-         *                                                      'tab'      => 'grading',
-         *                                                      'activity' => $cm_to_use->instance,
-         *                                                      'groupid'  => $group,
-         *                                                      'refresh_table'=>1)), '{group}');
-         * $rules[] = new restore_log_rule('grouptool', 'grade group',
-         *                                 new moodle_url("/mod/grouptool/view.php",
-         *                                                array('id'       => $this->grouptool->id,
-         *                                                      'tab'      => 'grading',
-         *                                                      'activity' => $cm_to_use->instance,
-         *                                                      'refresh_table'=> 1)), '{group}');
-         */
 
         return $rules;
     }

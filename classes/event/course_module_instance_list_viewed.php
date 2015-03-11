@@ -15,10 +15,7 @@
 // If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * version.php
- * Defines the version of grouptool
- * This code fragment is called by moodle_needs_upgrading() and
- * /admin/index.php
+ * The mod_grouptool_instance_list_viewed event.
  *
  * @package       mod_grouptool
  * @author        Andreas Hruska (andreas.hruska@tuwien.ac.at)
@@ -27,11 +24,8 @@
  * @copyright     2014 Academic Moodle Cooperation {@link http://www.academic-moodle-cooperation.org}
  * @license       http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+namespace mod_grouptool\event;
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2015012800;
-$plugin->release   = "2015-01-28 (00)";       // User-friendly version number.
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->requires  = 2014041100;         // Requires this Moodle version!
-$plugin->component = 'mod_grouptool';    // To check on upgrade, that module sits in correct place.
+class course_module_instance_list_viewed extends \core\event\course_module_instance_list_viewed {
+}

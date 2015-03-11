@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * index.php
@@ -34,7 +34,12 @@ $course = $DB->get_record('course', array('id' => $id), '*', MUST_EXIST);
 
 require_course_login($course);
 
-add_to_log($course->id, 'grouptool', 'view all', 'index.php?id='.$course->id, '');
+/* TRIGGER THE VIEW ALL EVENT */
+$event = \mod_grouptool\event\course_module_instance_list_viewed::create(array(
+    'context' => context_course::instance($course->id)
+));
+$event->trigger();
+/* END OF VIEW ALL EVENT */
 
 $coursecontext = context_course::instance($course->id);
 $PAGE->set_pagelayout('incourse');
@@ -104,7 +109,7 @@ foreach ($grouptools as $grouptool) {
     if (has_capability('mod/grouptool:register', $context)
         || has_capability('mod/grouptool:view_registrations', $context)) {
         // It's similar to the student mymoodle output!
-        $instance = new grouptool($grouptool->coursemodule, $grouptool);
+        $instance = new mod_grouptool($grouptool->coursemodule, $grouptool);
         $userstats = $instance->get_registration_stats($USER->id);
     }
 

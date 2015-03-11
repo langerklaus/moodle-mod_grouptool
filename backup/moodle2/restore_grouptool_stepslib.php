@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * restore_grouptool_stepslib.php
@@ -57,7 +57,7 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
     }
 
     protected function process_grouptool($data) {
-        global $DB, $CFG;
+        global $DB;
 
         $data = (object)$data;
         $oldid = $data->id;
@@ -70,13 +70,13 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
 
         // Due to an old bug it can happen that these settings haven't been backed up!
         if (!isset($data->ifmemberadded)) {
-            $data->ifmemberadded = $CFG->grouptool_ifmemberadded;
+            $data->ifmemberadded = get_config('mod_grouptool', 'ifmemberadded');
         }
         if (!isset($data->ifmemberremoved)) {
-            $data->ifmemberremoved = $CFG->grouptool_ifmemberremoved;
+            $data->ifmemberremoved = get_config('mod_grouptool', 'ifmemberremoved');
         }
         if (!isset($data->ifgroupdeleted)) {
-            $data->ifgroupdeleted = $CFG->grouptool_ifgroupdeleted;
+            $data->ifgroupdeleted = get_config('mod_grouptool', 'ifgroupdeleted');
         }
 
         // Insert the checkmark record!
@@ -97,18 +97,21 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
         }
 
         $data->grouptoolid = $this->get_new_parentid('grouptool');
-		$old = $data->groupid;
+        $old = $data->groupid;
         $data->groupid = $this->get_mappingid('group', $data->groupid);
-		if($data->groupid === false) {
-			echo $OUTPUT->notification("Couldn't find mapping id for group with former id-# ".$old.
-									   " so we have to skip it.".html_writer::empty_tag('br').
-									   "The group was ".($data->active ? 'active' : 'inactive')." in this instance", "notifytiny"); // Another posibility would be "redirectmessage"!
-			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
-					   'Couldn\'t find mapping id for group with former id '.$old.' so we have to skip it. The group was '.($data->active ? 'active' : 'inactive'));
-		} else {
-			$newitemid = $DB->insert_record('grouptool_agrps', $data);
-			$this->set_mapping('grouptool_agrp', $oldid, $newitemid);
-		}
+        if($data->groupid === false) {
+            $message = "Couldn't find mapping id for group with former id-# ".$old.
+                       " so we have to skip it.".html_writer::empty_tag('br').
+                       "The group was ".($data->active ? 'active' : 'inactive')." in this instance";
+            if (debugging()) { // If it's been displayed, we also write it to the error logs!
+                $from = format_backtrace(debug_backtrace(), CLI_SCRIPT || NO_DEBUG_DISPLAY);
+                error_log('Debugging: ' . $message . ' in '. PHP_EOL . $from);
+            }
+            debugging($message);
+        } else {
+            $newitemid = $DB->insert_record('grouptool_agrps', $data);
+            $this->set_mapping('grouptool_agrp', $oldid, $newitemid);
+        }
     }
 
     protected function process_agrp_registration($data) {
@@ -121,27 +124,36 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
             $data->userid = $data->user_id;
             unset($data->user_id);
         }
+        if (isset($data->agrp_id)) {
+            $data->agrpid = $data->agrp_id;
+            unset($data->agrpid);
+        }
 
-		$oldagrp = $data->agrpid;
+        $oldagrp = $data->agrpid;
         $data->agrpid = $this->get_new_parentid('grouptool_agrp');
-		$old = $data->userid;
+        $old = $data->userid;
         $data->userid = $this->get_mappingid('user', $data->userid);
         $data->modified_by = $this->get_mappingid('user', $data->modified_by);
 
-		if ($data->agrpid === false) {
-			echo $OUTPUT->notification("Couldn't find mapping id for agrp with former id-# ".$oldagrp.
-									   " so we have to skip it.", "notifytiny");
-			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
-					   'Couldn\'t find mapping id for agrp with former id '.$oldagrp.' so we have to skip it.');
-		} else if ($data->userid === false) {
-			echo $OUTPUT->notification("Couldn't find mapping id for user with former id-# ".$old.
-									   " so we have to skip it.", "notifytiny");
-			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
-					   'Couldn\'t find mapping id for user with former id '.$old.' so we have to skip it.');
-		} else {
-			$newitemid = $DB->insert_record('grouptool_registered', $data);
-			$this->set_mapping('agrp_registration', $oldid, $newitemid);
-		}
+        if ($data->agrpid === false) {
+
+            $message = "Couldn't find mapping id for agrp with former id-# ".$oldagrp." so we have to skip it.";
+            if (debugging()) { // If it's been displayed, we also write it to the error logs!
+                $from = format_backtrace(debug_backtrace(), CLI_SCRIPT || NO_DEBUG_DISPLAY);
+                error_log('Debugging: ' . $message . ' in '. PHP_EOL . $from);
+            }
+            debugging($message);
+        } else if ($data->userid === false) {
+            $message = "Couldn't find mapping id for user with former id-# ".$old." so we have to skip it.";
+            if (debugging()) { // If it's been displayed, we also write it to the error logs!
+                $from = format_backtrace(debug_backtrace(), CLI_SCRIPT || NO_DEBUG_DISPLAY);
+                error_log('Debugging: ' . $message . ' in '. PHP_EOL . $from);
+            }
+            debugging($message);
+        } else {
+            $newitemid = $DB->insert_record('grouptool_registered', $data);
+            $this->set_mapping('agrp_registration', $oldid, $newitemid);
+        }
     }
 
     protected function process_agrp_queue($data) {
@@ -154,26 +166,34 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
             $data->userid = $data->user_id;
             unset($data->user_id);
         }
+        if (isset($data->agrp_id)) {
+            $data->agrpid = $data->agrp_id;
+            unset($data->agrpid);
+        }
 
-		$oldagrp = $data->agrpid;
+        $oldagrp = $data->agrpid;
         $data->agrpid = $this->get_new_parentid('grouptool_agrp');
-		$old = $data->userid;
+        $old = $data->userid;
         $data->userid = $this->get_mappingid('user', $data->userid);
 
-		if ($data->agrpid === false) {
-			echo $OUTPUT->notification("Couldn't find mapping id for agrp with former id-# ".$oldagrp.
-									   " so we have to skip it.", "notifytiny");
-			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
-					   'Couldn\'t find mapping id for agrp with former id '.$oldagrp.' so we have to skip it.');
-		} else if ($data->userid === false) {
-			echo $OUTPUT->notification("Couldn't find mapping id for user with former id-# ".$old.
-									   " so we have to skip it.", "notifytiny");
-			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
-					   'Couldn\'t find mapping id for user with former id '.$old.' so we have to skip it.');
-		} else {
-			$newitemid = $DB->insert_record('grouptool_queued', $data);
-			$this->set_mapping('agrp_queue', $oldid, $newitemid);
-		}
+        if ($data->agrpid === false) {
+            $message = "Couldn't find mapping id for agrp with former id-# ".$oldagrp." so we have to skip it.";
+            if (debugging()) { // If it's been displayed, we also write it to the error logs!
+                $from = format_backtrace(debug_backtrace(), CLI_SCRIPT || NO_DEBUG_DISPLAY);
+                error_log('Debugging: ' . $message . ' in '. PHP_EOL . $from);
+            }
+            debugging($message);
+        } else if ($data->userid === false) {
+            $message = "Couldn't find mapping id for user with former id-# ".$old." so we have to skip it.";
+            if (debugging()) { // If it's been displayed, we also write it to the error logs!
+                $from = format_backtrace(debug_backtrace(), CLI_SCRIPT || NO_DEBUG_DISPLAY);
+                error_log('Debugging: ' . $message . ' in '. PHP_EOL . $from);
+            }
+            debugging($message);
+        } else {
+            $newitemid = $DB->insert_record('grouptool_queued', $data);
+            $this->set_mapping('agrp_queue', $oldid, $newitemid);
+        }
     }
 
     protected function after_execute() {

@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * lib.php
@@ -91,10 +91,6 @@ function grouptool_add_instance(stdClass $grouptool, mod_grouptool_mod_form $mfo
     $grouptool->choose_max = clean_param($grouptool->choose_max, PARAM_INT);
 
     $return = $DB->insert_record('grouptool', $grouptool);
-    add_to_log($grouptool->course,
-               'grouptool', 'add',
-               "view.php?g=".$return,
-               '');
 
     require_once($CFG->dirroot.'/calendar/lib.php');
     $event = new stdClass;
@@ -176,7 +172,15 @@ function grouptool_update_instance(stdClass $grouptool, mod_grouptool_mod_form $
         $grouptool->use_individual = 0;
     }
     if (!isset($grouptool->use_queue)) {
-        $grouptool->use_queue = 0;
+        $queues = $DB->count_records_sql("SELECT COUNT(DISTINCT queues.id)
+                                            FROM {grouptool_agrps} as agrps
+                                       LEFT JOIN {grouptool_queued} as queues ON queues.agrpid = agrps.id
+                                           WHERE agrps.grouptoolid = ?", array($grouptool->instance));
+        if (!empty($queues)) {
+            $grouptool->use_queue = 1;
+        } else {
+            $grouptool->use_queue = 0;
+        }
     }
     if (!isset($grouptool->allow_multiple)) {
         $grouptool->allow_multiple = 0;
@@ -186,15 +190,10 @@ function grouptool_update_instance(stdClass $grouptool, mod_grouptool_mod_form $
     $grouptool->choose_min = clean_param($grouptool->choose_min, PARAM_INT);
     $grouptool->choose_max = clean_param($grouptool->choose_max, PARAM_INT);
 
-    add_to_log($grouptool->course,
-            'grouptool', 'update',
-            "view.php?id=".$grouptool->id,
-            '');
-
     // Register students if immediate registration has been turned on!
     if ($grouptool->immediate_reg) {
         require_once($CFG->dirroot.'/mod/grouptool/locallib.php');
-        $instance = new grouptool($grouptool->coursemodule, $grouptool);
+        $instance = new mod_grouptool($grouptool->coursemodule, $grouptool);
         $instance->push_registrations();
     }
 
@@ -320,16 +319,17 @@ function grouptool_update_queues($grouptool = 0) {
                                                            $agrp->grpsize;
             $min = empty($grouptool->allow_multiple) ? 0 : $grouptool->choose_min;
             $max = empty($grouptool->allow_multiple) ? 1 : $grouptool->choose_max;
-            $sql = "SELECT queued.id as id, queued.agrpid as agrpid, queued.timestamp as timestamp,
-                           queued.userid as userid, (regs < ?) as priority, reg.regs as regs
+            // We use MAX to trick Postgres into thinking this is an full GROUP BY statement.
+            $sql = "SELECT queued.id as id, MAX(queued.agrpid) as agrpid, MAX(queued.timestamp),
+                           MAX(queued.userid) as userid, (regs < ?) as priority, MAX(reg.regs) as regs
                                   FROM {grouptool_queued} AS queued
                              LEFT JOIN (SELECT userid, COUNT(DISTINCT id) as regs
                                          FROM {grouptool_registered}
                                         WHERE agrpid ".$agrpsql."
                                      GROUP BY userid) AS reg ON queued.userid = reg.userid
                                  WHERE queued.agrpid = ?
-                              GROUP BY queued.id
-                              ORDER BY priority DESC, 'timestamp' ASC";
+                              GROUP BY queued.id, priority
+                              ORDER BY priority DESC, queued.timestamp ASC";
 
             if ($records = $DB->get_records_sql($sql, array_merge(array($min),
                                                                  $params, array($agrpid)))) {
@@ -378,11 +378,6 @@ function grouptool_delete_instance($id) {
     if (! $grouptool = $DB->get_record('grouptool', array('id' => $id))) {
         return false;
     }
-
-    add_to_log($grouptool->course,
-            'course', 'delete',
-            "view.php?id=".$grouptool->course,
-            '');
 
     // Get all agrp-ids for this grouptool-instance!
     if ($DB->record_exists('grouptool_agrps', array('grouptoolid' => $id))) {
@@ -522,19 +517,6 @@ function grouptool_get_recent_mod_activity(&$activities, &$index, $timestart, $c
  */
 function grouptool_print_recent_mod_activity($activity, $courseid, $detail, $modnames,
                                              $viewfullnames) {
-}
-
-/**
- * Function to be run periodically according to the moodle cron
- * This function searches for things that need to be done, such
- * as sending out mail, toggling flags etc ...
- *
- * we don't need any cron right now ^^
- *
- * @return boolean
- **/
-function grouptool_cron () {
-    return true;
 }
 
 /**
@@ -714,7 +696,7 @@ function grouptool_print_overview($courses, &$htmlarray) {
         $details = '';
         if (has_capability('mod/grouptool:register', $context)
                 || has_capability('mod/grouptool:view_registrations', $context)) {
-            $instance = new grouptool($grouptool->coursemodule, $grouptool);
+            $instance = new mod_grouptool($grouptool->coursemodule, $grouptool);
             $userstats = $instance->get_registration_stats($USER->id);
         }
 
