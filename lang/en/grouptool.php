@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * lang/en/grouptool.php
@@ -84,6 +84,8 @@ $string['cfg_ifmemberremoved'] = 'If groupmembers are removed';
 $string['cfg_ifmemberremoved_desc'] = 'Should grouptool registrations be deleted if users are deleted from the corresponding moodle-group?';
 $string['cfg_immediate_reg'] = 'Immediate registration';
 $string['cfg_immediate_reg_desc'] = 'Should every registration be passed through to the moodle-groups?';
+$string['cfg_importfields'] = 'Comparation-fields for import';
+$string['cfg_importfields_desc'] = 'Defines which fields in user table are to be compared to the data when importing users. The fields are searched one-by-one until a unique match is found. Possible/useful values are for example: username, idnumber, email. ATTENTION: there\'s no check for correct fieldnames. Permitted characters: a-z, A-Z and \',\'';
 $string['cfg_max_queues'] = 'Max simultaneous queues per user';
 $string['cfg_max_queues_desc'] = 'Determines in how many different groups a user can be queued at the same time by default.';
 $string['cfg_moodlesync_head'] = 'Syncronisation behaviour';
@@ -394,8 +396,8 @@ $string['tags'] = 'Available tags';
 $string['tags_help'] = 'You can use this tags to define the name scheme. Each of this tags will be replaced in the final groupnames. The tags in [] are related to the users data and the # and @ symbols will be replaced through the groups serial number. If JavaScript is enabled you can simply click on the tags to append them to the name-scheme. Please consider that the group names have to be unique in each course and therefore you may have to alter the name scheme until it\'s conflict-free.';
 $string['target'] = 'Target';
 $string['too_many_queue_places'] = 'Can\'t queue {$a->username} in group {$a->groupname} because {$a->username} is already queued in too many groups!';
-$string['toomanyregs'] = 'Attention: In at least one group there are more groupmembers than specified by the desired new groupsize.<br />Reduce the groupmembers in the groups before changing the groupsize.';
 $string['too_many_regs'] = 'User is registered/queued in too many groups allready!';
+$string['toomanyregs'] = 'Attention: In at least one group there are more groupmembers than specified by the desired new groupsize.<br />Reduce the groupmembers in the groups before changing the groupsize.';
 $string['toomanyregspresent'] = 'At least 1 user is registered in too many groups, therefore the maximum groups to choose has to be at least {$a}.';
 $string['toolessregspresent'] = 'At least 1 user is registered in too less groups, therefore the minimum groups to choose has to be at max {$a}.';
 $string['you_have_too_many_queue_places'] = 'Can\'t queue you in group {$a->groupname} because you are already queued in too many groups!';

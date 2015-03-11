@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * restore_grouptool_stepslib.php
@@ -67,9 +67,9 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
         $data->timeavailable = $this->apply_date_offset($data->timeavailable);
         $data->timemodified = $this->apply_date_offset($data->timemodified);
         $data->timecreated = time();
-        
+
         // Due to an old bug it can happen that these settings haven't been backed up!
-        if(!isset($data->ifmemberadded)) {
+        if (!isset($data->ifmemberadded)) {
             $data->ifmemberadded = $CFG->grouptool_ifmemberadded;
         }
         if (!isset($data->ifmemberremoved)) {
@@ -86,41 +86,62 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
     }
 
     protected function process_grouptool_agrp($data) {
-        global $DB;
+        global $DB, $OUTPUT;
 
         $data = (object)$data;
         $oldid = $data->id;
 
-        if(isset($data->group_id)) {
+        if (isset($data->group_id)) {
             $data->groupid = $data->group_id;
             unset($data->group_id);
         }
-        
+
         $data->grouptoolid = $this->get_new_parentid('grouptool');
-
+		$old = $data->groupid;
         $data->groupid = $this->get_mappingid('group', $data->groupid);
-
-        $newitemid = $DB->insert_record('grouptool_agrps', $data);
-        $this->set_mapping('grouptool_agrp', $oldid, $newitemid);
+		if($data->groupid === false) {
+			echo $OUTPUT->notification("Couldn't find mapping id for group with former id-# ".$old.
+									   " so we have to skip it.".html_writer::empty_tag('br').
+									   "The group was ".($data->active ? 'active' : 'inactive')." in this instance", "notifytiny"); // Another posibility would be "redirectmessage"!
+			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
+					   'Couldn\'t find mapping id for group with former id '.$old.' so we have to skip it. The group was '.($data->active ? 'active' : 'inactive'));
+		} else {
+			$newitemid = $DB->insert_record('grouptool_agrps', $data);
+			$this->set_mapping('grouptool_agrp', $oldid, $newitemid);
+		}
     }
 
     protected function process_agrp_registration($data) {
-        global $DB;
+        global $DB, $OUTPUT;
 
         $data = (object)$data;
         $oldid = $data->id;
 
-        if(isset($data->user_id)) {
+        if (isset($data->user_id)) {
             $data->userid = $data->user_id;
             unset($data->user_id);
         }
 
+		$oldagrp = $data->agrpid;
         $data->agrpid = $this->get_new_parentid('grouptool_agrp');
+		$old = $data->userid;
         $data->userid = $this->get_mappingid('user', $data->userid);
         $data->modified_by = $this->get_mappingid('user', $data->modified_by);
 
-        $newitemid = $DB->insert_record('grouptool_registered', $data);
-        $this->set_mapping('agrp_registration', $oldid, $newitemid);
+		if ($data->agrpid === false) {
+			echo $OUTPUT->notification("Couldn't find mapping id for agrp with former id-# ".$oldagrp.
+									   " so we have to skip it.", "notifytiny");
+			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
+					   'Couldn\'t find mapping id for agrp with former id '.$oldagrp.' so we have to skip it.');
+		} else if ($data->userid === false) {
+			echo $OUTPUT->notification("Couldn't find mapping id for user with former id-# ".$old.
+									   " so we have to skip it.", "notifytiny");
+			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
+					   'Couldn\'t find mapping id for user with former id '.$old.' so we have to skip it.');
+		} else {
+			$newitemid = $DB->insert_record('grouptool_registered', $data);
+			$this->set_mapping('agrp_registration', $oldid, $newitemid);
+		}
     }
 
     protected function process_agrp_queue($data) {
@@ -129,16 +150,30 @@ class restore_grouptool_activity_structure_step extends restore_activity_structu
         $data = (object)$data;
         $oldid = $data->id;
 
-        if(isset($data->user_id)) {
+        if (isset($data->user_id)) {
             $data->userid = $data->user_id;
             unset($data->user_id);
         }
-        
+
+		$oldagrp = $data->agrpid;
         $data->agrpid = $this->get_new_parentid('grouptool_agrp');
+		$old = $data->userid;
         $data->userid = $this->get_mappingid('user', $data->userid);
 
-        $newitemid = $DB->insert_record('grouptool_queued', $data);
-        $this->set_mapping('agrp_queue', $oldid, $newitemid);
+		if ($data->agrpid === false) {
+			echo $OUTPUT->notification("Couldn't find mapping id for agrp with former id-# ".$oldagrp.
+									   " so we have to skip it.", "notifytiny");
+			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
+					   'Couldn\'t find mapping id for agrp with former id '.$oldagrp.' so we have to skip it.');
+		} else if ($data->userid === false) {
+			echo $OUTPUT->notification("Couldn't find mapping id for user with former id-# ".$old.
+									   " so we have to skip it.", "notifytiny");
+			add_to_log($this->get_courseid(), 'grouptool', 'update', "view.php?id=".$data->grouptoolid,
+					   'Couldn\'t find mapping id for user with former id '.$old.' so we have to skip it.');
+		} else {
+			$newitemid = $DB->insert_record('grouptool_queued', $data);
+			$this->set_mapping('agrp_queue', $oldid, $newitemid);
+		}
     }
 
     protected function after_execute() {
