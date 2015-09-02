@@ -76,13 +76,21 @@
     vertical-align:middle;
 }
 
-.path-mod-grouptool .draggable_item .grpname, .draggable_item .addfield {
-    font-weight:bold;
-    width:20em;
-    font-size:1.6em;
+.path-mod-grouptool .draggable_item .grpname, .path-mod-grouptool .draggable_item .addfield {
     vertical-align:middle;
     overflow:hidden;
     white-space:wrap;
+    -moz-hyphens: auto;
+    -o-hyphens: auto;
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+    hyphens: auto;
+    hyphenate-limit-chars: auto 5;
+    hyphenate-limit-lines: 2;
+}
+
+.path-mod-grouptool .draggable_item .grpname .text {
+    font-weight:bold;
 }
 
 .path-mod-grouptool .draggable_item .grpsize {
@@ -91,7 +99,6 @@
     text-align:middle;
     vertical-align:middle;
     font-weight:normal;
-    font-size:1.2em;
 }
 
 .path-mod-grouptool .draggable_item .grpsize input {
@@ -106,7 +113,6 @@
 }
 
 .path-mod-grouptool .draggable_item .buttons input[type=image], .draggable_item .buttons img {
-    height:20px;
     background-color: transparent !important;/*#34637f;*/
 }
 
@@ -326,6 +332,10 @@
     margin-right:auto;
 }
 
+.path-mod-grouptool #importpreview th {
+    white-space: nowrap;
+}
+
 .path-mod-grouptool .groupcontainer.uptodate {
 
 }
@@ -377,7 +387,11 @@
     font-weight:bold;
 }
 
-.path-mod-grouptool .no_queues, .no_registrations {
+.path-mod-grouptool .nowrap * {
+    white-space:nowrap;
+}
+
+.path-mod-grouptool .no_queues, .path-mod-grouptool .no_registrations {
     text-align:center;
 }
 

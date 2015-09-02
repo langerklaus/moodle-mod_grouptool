@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * showmembers_ajax.php
@@ -50,16 +50,35 @@ $PAGE->set_context($context);
 $PAGE->set_url('/mod/grouptool/showmembers_ajax.php', array('contextid' => $context->id,
                                                             'agrpid'    => $agrpid));
 
-$group = $DB->get_record_sql('SELECT grp.id as grpid, grp.name as grpname, grp.courseid as courseid,
-                                     agrp.id as agrpid, agrp.grpsize as size,
-                                     agrp.grouptoolid as grouptoolid
-                              FROM {grouptool_agrps} AS agrp
-                                LEFT JOIN {groups} AS grp ON agrp.groupid = grp.id
+$modinfo = get_fast_modinfo($course);
+$cm = $modinfo->get_cm($cm->id);
+if (!$cm->uservisible) {
+    $result = new stdClass();
+    if ($cm->availableinfo) {
+        // User cannot access the activity, but on the course page they will
+        // see a link to it, greyed-out, with information (HTML format) from
+        // $cm->availableinfo about why they can't access it.
+        $text = "\n".format_text($cm->availableinfo, FORMAT_PLAIN);
+    } else {
+        // User cannot access the activity and they will not see it at all.
+        $text = '';
+    }
+    $result->error = get_string('conditions_prevent_access', 'grouptool').$text;
+    echo json_encode($result);
+    die;
+}
+
+$group = $DB->get_record_sql('SELECT grp.id grpid, grp.name grpname, grp.courseid courseid,
+                                     agrp.id agrpid, agrp.grpsize size,
+                                     agrp.grouptoolid grouptoolid
+                              FROM {grouptool_agrps} agrp
+                                LEFT JOIN {groups} grp ON agrp.groupid = grp.id
                               WHERE agrp.id = ?', array($agrpid), MUST_EXIST);
 $grouptool = $DB->get_record('grouptool', array('id' => $group->grouptoolid), '*', MUST_EXIST);
 
 $text = '';
-if (!has_capability('mod/grouptool:view_registrations', $context)
+if (!has_capability('mod/grouptool:view_regs_group_view', $context)
+    && !has_capability('mod/grouptool:view_regs_course_view', $context)
     && !$grouptool->show_members) {
     $text .= html_writer::tag('div', get_string('not_allowed_to_show_members', 'grouptool'),
                               array('class' => 'reg'));
@@ -69,8 +88,8 @@ if (!has_capability('mod/grouptool:view_registrations', $context)
     $userfieldssql = user_picture::fields('usr', array('idnumber'));
     // Get registrations but exclude all who are just marked for registration!
     $regsql = "SELECT $userfieldssql
-               FROM {grouptool_registered} as reg
-                   LEFT JOIN {user} as usr ON reg.userid = usr.id
+               FROM {grouptool_registered} reg
+                   LEFT JOIN {user} usr ON reg.userid = usr.id
                WHERE reg.agrpid = ? AND reg.modified_by >= 0
                ORDER BY timestamp ASC";
     if (!$regs = $DB->get_records_sql($regsql, array($agrpid))) {
@@ -95,8 +114,8 @@ if (!has_capability('mod/grouptool:view_registrations', $context)
     $text .= $OUTPUT->heading(get_string('queue', 'grouptool'), 3, 'showmembersheading queue');
     // Get queue but exclude all who are just marked not queued!
     $queuesql = "SELECT $userfieldssql
-                 FROM {grouptool_queued} as queue
-                     LEFT JOIN {user} as usr ON queue.userid = usr.id
+                 FROM {grouptool_queued} queue
+                     LEFT JOIN {user} usr ON queue.userid = usr.id
                  WHERE queue.agrpid = ?
                  ORDER BY timestamp ASC";
     if (!$queue = $DB->get_records_sql($queuesql, array($agrpid))) {

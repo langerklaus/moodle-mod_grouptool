@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * download.php
@@ -38,7 +38,6 @@ $PAGE->set_url($url);
 $instance = new mod_grouptool($cmid);
 
 require_login($cm->course, true, $cm);
-require_capability('mod/grouptool:view_registrations', $context);
 require_capability('mod/grouptool:export', $context);
 
 $groupingid = optional_param('groupingid', 0, PARAM_INT);
@@ -46,38 +45,56 @@ $groupid = optional_param('groupid', 0, PARAM_INT);
 $PAGE->url->param('groupingid', $groupingid);
 $PAGE->url->param('groupid', $groupid);
 
+$modinfo = get_fast_modinfo($cm->course);
+$cm = $modinfo->get_cm($cm->id);
+if (empty($cm->uservisible)) {
+    if ($cm->availableinfo) {
+        // User cannot access the activity, but on the course page they will
+        // see a link to it, greyed-out, with information (HTML format) from
+        // $cm->availableinfo about why they can't access it.
+        $text = html_writer::empty_tag('br').$cm->availableinfo;
+    } else {
+        // User cannot access the activity and they will not see it at all.
+        $text = '';
+    }
+    $notification = $OUTPUT->notification(get_string('conditions_prevent_access', 'grouptool').
+                                          html_writer::empty_tag('br').$text, 'notifyproblem');
+    echo $OUTPUT->header();
+    echo $OUTPUT->box($notification, 'generalbox centered');
+    echo $OUTPUT->footer();
+    die;
+}
+
 $tab = required_param('tab', PARAM_ALPHA);
 $format = required_param('format', PARAM_INT);
-switch($format) {
+switch ($format) {
     case GROUPTOOL_PDF:
-        $format_readable = 'PDF';
+        $readableformat = 'PDF';
     break;
     case GROUPTOOL_TXT:
-        $format_readable = 'TXT';
-    break;
-    case GROUPTOOL_XLS:
-        $format_readable = 'XLS';
+        $readableformat = 'TXT';
     break;
     case GROUPTOOL_XLSX:
-        $format_readable = 'XLSX';
+        $readableformat = 'XLSX';
     break;
     case GROUPTOOL_ODS:
-        $format_readable = 'ODS';
+        $readableformat = 'ODS';
     break;
     default:
-        $format_readable = 'unknown';
+        $readableformat = 'unknown';
 }
 
 /* Trigger the log event before delivering the download! */
-switch($tab) {
+switch ($tab) {
     case 'overview':
+        require_capability('mod/grouptool:view_regs_group_view', $context);
         // Trigger overview event.
         $event = \mod_grouptool\event\overview_exported::create(array(
             'objectid' => $cm->instance,
             'context'  => context_module::instance($cm->id),
             'other'    => array(
                 'tab' => $tab,
-                'format_readable' => $format_readable,
+                'format_readable' => $readableformat,
                 'format' => $format,
                 'groupid' => $groupid,
                 'groupingid' => $groupingid,
@@ -86,13 +103,14 @@ switch($tab) {
         $event->trigger();
     break;
     case 'userlist':
+        require_capability('mod/grouptool:view_regs_course_view', $context);
         // Trigger userlist event.
         $event = \mod_grouptool\event\userlist_exported::create(array(
             'objectid' => $cm->instance,
             'context'  => context_module::instance($cm->id),
             'other'    => array(
                 'tab' => $tab,
-                'format_readable' => $format_readable,
+                'format_readable' => $readableformat,
                 'format' => $format,
                 'groupid' => $groupid,
                 'groupingid' => $groupingid,
@@ -107,7 +125,7 @@ switch($tab) {
 switch ($tab) {
     case 'overview':
         $PAGE->url->param('tab', 'overview');
-        switch($format) {
+        switch ($format) {
             case GROUPTOOL_PDF:
                 $PAGE->url->param('format', GROUPTOOL_PDF);
                 echo $instance->download_overview_pdf($groupid, $groupingid);
@@ -115,10 +133,6 @@ switch ($tab) {
             case GROUPTOOL_TXT:
                 $PAGE->url->param('format', GROUPTOOL_TXT);
                 echo $instance->download_overview_txt($groupid, $groupingid);
-                break;
-            case GROUPTOOL_XLS:
-                $PAGE->url->param('format', GROUPTOOL_XLS);
-                echo $instance->download_overview_xls($groupid, $groupingid);
                 break;
             case GROUPTOOL_XLSX:
                 $PAGE->url->param('format', GROUPTOOL_XLSX);
@@ -135,7 +149,7 @@ switch ($tab) {
         break;
     case 'userlist':
         $PAGE->url->param('tab', 'userlist');
-        switch($format) {
+        switch ($format) {
             case GROUPTOOL_PDF:
                 $PAGE->url->param('format', GROUPTOOL_PDF);
                 echo $instance->download_userlist_pdf($groupid, $groupingid);
@@ -143,10 +157,6 @@ switch ($tab) {
             case GROUPTOOL_TXT:
                 $PAGE->url->param('format', GROUPTOOL_TXT);
                 echo $instance->download_userlist_txt($groupid, $groupingid);
-                break;
-            case GROUPTOOL_XLS:
-                $PAGE->url->param('format', GROUPTOOL_XLS);
-                echo $instance->download_userlist_xls($groupid, $groupingid);
                 break;
             case GROUPTOOL_XLSX:
                 $PAGE->url->param('format', GROUPTOOL_XLSX);

@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * lib.php
@@ -41,18 +41,28 @@ require_once(dirname(__FILE__).'/definitions.php');
  * @return mixed true if the feature is supported, null if unknown
  */
 function grouptool_supports($feature) {
-    switch($feature) {
-        case FEATURE_MOD_INTRO:         return true;
-        case FEATURE_GROUPS:            return true;
-        case FEATURE_GROUPINGS:         return true;
-        case FEATURE_GROUPMEMBERSONLY:  return true;
-        case FEATURE_BACKUP_MOODLE2:    return true;
-        case FEATURE_IDNUMBER:          return false;
-        case FEATURE_MOD_INTRO:         return true;
-        case FEATURE_SHOW_DESCRIPTION:  return true;
-        case FEATURE_MOD_ARCHETYPE:     return MOD_ARCHETYPE_OTHER;
+    switch ($feature) {
+        case FEATURE_MOD_INTRO:
+            return true;
+        case FEATURE_GROUPS:
+            return true;
+        case FEATURE_GROUPINGS:
+            return true;
+        case FEATURE_GROUPMEMBERSONLY:
+            return true;
+        case FEATURE_BACKUP_MOODLE2:
+            return true;
+        case FEATURE_IDNUMBER:
+            return false;
+        case FEATURE_MOD_INTRO:
+            return true;
+        case FEATURE_SHOW_DESCRIPTION:
+            return true;
+        case FEATURE_MOD_ARCHETYPE:
+            return MOD_ARCHETYPE_OTHER;
 
-        default:                        return false;
+        default:
+            return false;
     }
 }
 
@@ -173,8 +183,8 @@ function grouptool_update_instance(stdClass $grouptool, mod_grouptool_mod_form $
     }
     if (!isset($grouptool->use_queue)) {
         $queues = $DB->count_records_sql("SELECT COUNT(DISTINCT queues.id)
-                                            FROM {grouptool_agrps} as agrps
-                                       LEFT JOIN {grouptool_queued} as queues ON queues.agrpid = agrps.id
+                                            FROM {grouptool_agrps} agrps
+                                       LEFT JOIN {grouptool_queued} queues ON queues.agrpid = agrps.id
                                            WHERE agrps.grouptoolid = ?", array($grouptool->instance));
         if (!empty($queues)) {
             $grouptool->use_queue = 1;
@@ -320,13 +330,13 @@ function grouptool_update_queues($grouptool = 0) {
             $min = empty($grouptool->allow_multiple) ? 0 : $grouptool->choose_min;
             $max = empty($grouptool->allow_multiple) ? 1 : $grouptool->choose_max;
             // We use MAX to trick Postgres into thinking this is an full GROUP BY statement.
-            $sql = "SELECT queued.id as id, MAX(queued.agrpid) as agrpid, MAX(queued.timestamp),
-                           MAX(queued.userid) as userid, (regs < ?) as priority, MAX(reg.regs) as regs
-                      FROM {grouptool_queued} AS queued
-                 LEFT JOIN (SELECT userid, COUNT(DISTINCT id) as regs
+            $sql = "SELECT queued.id id, MAX(queued.agrpid) agrpid, MAX(queued.timestamp),
+                           MAX(queued.userid) userid, (regs < ?) priority, MAX(reg.regs) regs
+                      FROM {grouptool_queued} queued
+                 LEFT JOIN (SELECT userid, COUNT(DISTINCT id) regs
                               FROM {grouptool_registered}
                              WHERE agrpid ".$agrpsql." AND modified_by >= 0
-                          GROUP BY userid) AS reg ON queued.userid = reg.userid
+                          GROUP BY userid) reg ON queued.userid = reg.userid
                      WHERE queued.agrpid = ?
                   GROUP BY queued.id, priority
                   ORDER BY priority DESC, queued.timestamp ASC";
@@ -553,13 +563,32 @@ function grouptool_get_extra_capabilities() {
  */
 function grouptool_extend_navigation(navigation_node $navref, stdclass $course, stdclass $module,
                                      cm_info $cm) {
+    global $DB;
     $context = context_module::instance($cm->id);
-    if (has_capability('mod/grouptool:create_groups', $context)
-            || has_capability('mod/grouptool:create_groupings', $context)
-            || has_capability('mod/grouptool:register_students', $context)) {
-        $navref->add(get_string('administration', 'grouptool'),
-                     new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
-                                                                     'tab' => 'administration')));
+    $creategrps = has_capability('mod/grouptool:create_groups', $context);
+    $creategrpgs = has_capability('mod/grouptool:create_groupings', $context);
+    $admingrps = has_capability('mod/grouptool:administrate_groups', $context);
+
+    if ($creategrps || $creategrpgs || $admingrps) {
+        if ($creategrps && ($admingrps || $creategrpgs)) {
+            $admin = $navref->add(get_string('administration', 'grouptool'),
+                                  new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
+                                                                                  'tab' => 'administration')));
+            $admin->add(get_string('group_administration', 'grouptool'),
+                                   new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
+                                                                                   'tab' => 'group_admin')));
+            $admin->add(get_string('group_creation', 'grouptool'),
+                                   new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
+                                                                                   'tab' => 'group_creation')));
+        } else if ($creategrps) {
+            $navref->add(get_string('group_creation', 'grouptool'),
+                         new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
+                                                                                  'tab' => 'group_creation')));
+        } else if ($creategrpgs || $admingrps) {
+            $navref->add(get_string('group_administration', 'grouptool'),
+                         new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
+                                                                                  'tab' => 'group_admin')));
+        }
     }
     if (has_capability('mod/grouptool:grade', $context)
             || has_capability('mod/grouptool:grade_own_group', $context)) {
@@ -571,25 +600,38 @@ function grouptool_extend_navigation(navigation_node $navref, stdclass $course, 
     if (groups_get_activity_groupmode($cm, $course) != NOGROUPS) {
         $gmok = $gmok && groups_has_membership($cm);
     }
+    $gt = $DB->get_record('grouptool', array('id' => $cm->instance));
+    $regopen = ($gt->allow_reg && (($gt->timedue == 0) || (time() < $gt->timedue))
+                && ($gt->timeavailable < time()));
 
     if (has_capability('mod/grouptool:register_students', $context)
-       || ($gmok && has_capability('mod/grouptool:register', $context))) {
-        $navref->add(get_string('selfregistration', 'grouptool'),
-                new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
-                                                                'tab' => 'selfregistration')));
+        || ($regopen && $gmok && has_capability('mod/grouptool:register', $context))) {
+        $tmp = $navref->add(get_string('selfregistration', 'grouptool'),
+                            new moodle_url('/mod/grouptool/view.php', array('id'  => $cm->id,
+                                                                            'tab' => 'selfregistration')));
     }
+
     if (has_capability('mod/grouptool:register_students', $context)) {
         $navref->add(get_string('import', 'grouptool'),
                 new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'import')));
     }
-    if (has_capability('mod/grouptool:view_registrations', $context)) {
-        $navref->add(get_string('overview', 'grouptool'),
-                new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'overview')));
+    if (has_capability('mod/grouptool:view_regs_course_view', $context)
+        && has_capability('mod/grouptool:view_regs_group_view', $context)) {
+        $userstab = $navref->add(get_string('users_tab', 'grouptool'),
+                                 new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'overview')));
+        $userstab->add(get_string('overview_tab', 'grouptool'),
+                       new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'overview')));
+        $userstab->add(get_string('userlist_tab', 'grouptool'),
+                       new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'userlist')));
+    } else if (has_capability('mod/grouptool:view_regs_group_view', $context)) {
+        $navref->add(get_string('users_tab', 'grouptool'),
+                     new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'overview')));
+    } else if (has_capability('mod/grouptool:view_regs_course_view', $context)) {
+        $navref->add(get_string('users_tab', 'grouptool'),
+                     new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'userlist')));
     }
-    if (has_capability('mod/grouptool:view_registrations', $context)) {
-        $navref->add(get_string('userlist', 'grouptool'),
-                new moodle_url('/mod/grouptool/view.php', array('id' => $cm->id, 'tab' => 'userlist')));
-    }
+
+    $navref->nodetype = navigation_node::NODETYPE_BRANCH;
 }
 
 /**
@@ -672,7 +714,8 @@ function grouptool_print_overview($courses, &$htmlarray) {
 
         $str = "";
         if (has_capability('mod/grouptool:register', $context)
-                || has_capability('mod/grouptool:view_registrations', $context)) {
+            || has_capability('mod/grouptool:view_regs_group_view', $context)
+            || has_capability('mod/grouptool:view_regs_course_view', $context)) {
             $attrib = array('title' => $strgrouptool, 'href' => $CFG->wwwroot.
                                                                 '/mod/grouptool/view.php?id='.
                                                                 $grouptool->coursemodule);
@@ -703,7 +746,8 @@ function grouptool_print_overview($courses, &$htmlarray) {
         }
         $details = '';
         if (has_capability('mod/grouptool:register', $context)
-                || has_capability('mod/grouptool:view_registrations', $context)) {
+            || has_capability('mod/grouptool:view_regs_group_view', $context)
+            || has_capability('mod/grouptool:view_regs_course_view', $context)) {
             $instance = new mod_grouptool($grouptool->coursemodule, $grouptool);
             $userstats = $instance->get_registration_stats($USER->id);
         }
@@ -749,11 +793,11 @@ function grouptool_print_overview($courses, &$htmlarray) {
                     $stringlabel = 'registration_missing';
                 }
                 $details .= html_writer::tag('div',
-                        html_writer::tag('div',
-                                get_string($stringlabel, 'grouptool', $missing)).
-                        get_string('registrations', 'grouptool').': '.
-                        get_string('not_registered', 'grouptool'),
-                        array('class' => 'registered'));
+                                             html_writer::tag('div',
+                                                              get_string($stringlabel, 'grouptool', $missing)).
+                                             get_string('registrations', 'grouptool').': '.
+                                             get_string('not_registered', 'grouptool'),
+                                             array('class' => 'registered'));
             }
             if (count($userstats->queued)) {
                 $tempstr = "";
@@ -771,15 +815,18 @@ function grouptool_print_overview($courses, &$htmlarray) {
             }
         }
 
-        if (has_capability('mod/grouptool:view_registrations', $context) && $grouptool->allow_reg) {
+        if ($grouptool->allow_reg
+            && (has_capability('mod/grouptool:view_regs_group_view', $context)
+                || has_capability('mod/grouptool:view_regs_course_view', $context))) {
             $details .= html_writer::tag('div', get_string('global_userstats', 'grouptool',
                                                            $userstats),
                                          array('class' => 'userstats'));
 
         }
 
-        if ((has_capability('mod/grouptool:view_registrations', $context)
-                                      || has_capability('mod/grouptool:register', $context))) {
+        if (has_capability('mod/grouptool:view_regs_group_view', $context)
+            || has_capability('mod/grouptool:view_regs_course_view', $context)
+            || has_capability('mod/grouptool:register', $context)) {
             if ($grouptool->allow_reg) {
                 $str .= html_writer::tag('div', $details, array('class' => 'details'));
             }
@@ -863,11 +910,11 @@ function grouptool_reset_course_form_definition(&$mform) {
     $mform->addElement('advcheckbox', 'reset_grouptool_registrations',
                        get_string('reset_registrations', 'grouptool'));
     $mform->addHelpButton('reset_grouptool_registrations', 'reset_registrations', 'grouptool');
-    $mform->disabledIf('reset_grouptool_registrations', 'reset_grouptool_agrps', 'checked');
+    $mform->disabledif ('reset_grouptool_registrations', 'reset_grouptool_agrps', 'checked');
     $mform->addElement('advcheckbox', 'reset_grouptool_queues',
                        get_string('reset_queues', 'grouptool'));
     $mform->addHelpButton('reset_grouptool_queues', 'reset_queues', 'grouptool');
-    $mform->disabledIf('reset_grouptool_queues', 'reset_grouptool_agrps', 'checked');
+    $mform->disabledif ('reset_grouptool_queues', 'reset_grouptool_agrps', 'checked');
     $mform->addElement('advcheckbox', 'reset_grouptool_transparent_unreg',
                        get_string('reset_transparent_unreg', 'grouptool'));
     $mform->addHelpButton('reset_grouptool_transparent_unreg', 'reset_transparent_unreg',

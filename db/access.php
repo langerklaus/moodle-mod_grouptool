@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * db/access.php
@@ -81,7 +81,17 @@ $capabilities = array(
                 )
         ),
 
-        'mod/grouptool:view_registrations' => array(
+        'mod/grouptool:view_regs_group_view' => array(
+                'captype' => 'read',
+                'contextlevel' => CONTEXT_MODULE,
+                'legacy' => array(
+                        'teacher' => CAP_ALLOW,
+                        'editingteacher' => CAP_ALLOW,
+                        'manager' => CAP_ALLOW
+                )
+        ),
+
+        'mod/grouptool:view_regs_course_view' => array(
                 'captype' => 'read',
                 'contextlevel' => CONTEXT_MODULE,
                 'legacy' => array(
@@ -110,6 +120,16 @@ $capabilities = array(
         ),
 
         'mod/grouptool:grade_own_group' => array(
+                'captype' => 'write',
+                'contextlevel' => CONTEXT_MODULE,
+                'legacy' => array(
+                        'teacher' => CAP_ALLOW,
+                        'editingteacher' => CAP_ALLOW,
+                        'manager' => CAP_ALLOW
+                )
+        ),
+
+        'mod/grouptool:administrate_groups' => array(
                 'captype' => 'write',
                 'contextlevel' => CONTEXT_MODULE,
                 'legacy' => array(

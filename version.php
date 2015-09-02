@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * version.php
@@ -30,8 +30,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2015042200;
-$plugin->release   = "2015-04-22 (00)";       // User-friendly version number.
+$plugin->version   = 2015071500;
+$plugin->release   = "2015-07-15 (00)";       // User-friendly version number.
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->requires  = 2014041100;         // Requires this Moodle version!
 $plugin->component = 'mod_grouptool';    // To check on upgrade, that module sits in correct place.
